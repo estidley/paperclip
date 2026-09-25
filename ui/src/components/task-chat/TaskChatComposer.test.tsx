@@ -290,6 +290,16 @@ function autocompleteOption(matchText: string) {
 }
 
 describe("TaskChatComposer", () => {
+  it("shows a transcribe control beside send", () => {
+    render(<TaskChatComposer onAdd={vi.fn()} workMode="standard" />);
+    const transcribe = container.querySelector<HTMLButtonElement>(
+      '[data-testid="transcribe-button"]',
+    );
+    expect(transcribe).not.toBeNull();
+    expect(transcribe?.getAttribute("aria-label")).toBe("Transcribe");
+    expect(sendButton()).not.toBeNull();
+  });
+
   it("settles an acknowledged submission after navigating away", async () => {
     const key = "navigate-before-save";
     let resolveSend!: () => void;

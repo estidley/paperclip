@@ -89,6 +89,35 @@ The vite dev server serves an unbundled module graph. This is fast to reload on 
 
 The preview server binds `0.0.0.0` and accepts any Host, so a tailnet or LAN address (e.g. `http://<host>.ts.net:3101/`) works out of the box. The `/api` proxy sets `x-forwarded-host` and `x-forwarded-proto`, which the server's board mutation guard uses to trust the browser's Origin — mutations from `:3101` succeed against the API on `:3100` without further configuration. An HTTPS tunnel in front of the preview server (ngrok, tailscale funnel) is also supported: the tunnel's `x-forwarded-proto` header is preserved when set.
 
+## Voice transcription
+
+The reply box on an agent chat and on a task has a Transcribe button. Click it to record. Click it again to stop. The server sends that audio to a speech-to-text API and the UI inserts the text into the reply box. The reply is not sent.
+
+Groq is the default when `GROQ_API_KEY` is set. The model is `whisper-large-v3-turbo`. If Groq is not configured and `OPENAI_API_KEY` is set, the server uses OpenAI `gpt-4o-mini-transcribe`. Set these in `.env` and restart `pnpm dev`:
+
+```sh
+GROQ_API_KEY=gsk_...
+# or, when Groq is not configured:
+OPENAI_API_KEY=sk-...
+```
+
+Optional overrides select another OpenAI-compatible endpoint. Use them for a different cloud host or, later, a local server. A custom host does not receive `GROQ_API_KEY` or `OPENAI_API_KEY`. Set `PAPERCLIP_TRANSCRIBE_API_KEY` when that host requires a bearer token.
+
+```sh
+PAPERCLIP_TRANSCRIBE_BASE_URL=http://127.0.0.1:8000/v1
+PAPERCLIP_TRANSCRIBE_MODEL=base
+PAPERCLIP_TRANSCRIBE_API_KEY=
+```
+
+Manual check:
+
+1. Start the app with `pnpm dev`.
+2. Open an agent chat or a task reply box.
+3. Click Transcribe, allow the microphone, speak, and click Transcribe again.
+4. Confirm the transcript is in the box and the message was not sent.
+
+If neither key is set, the button shows an error toast. The route is `POST /api/companies/:companyId/transcribe` with a multipart `audio` field. Board members of that company can call it.
+
 ## Storybook
 
 The board UI Storybook keeps stories and Storybook config under `ui/storybook/` so component review files stay out of the app source routes.

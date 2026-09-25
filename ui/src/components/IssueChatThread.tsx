@@ -244,6 +244,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { TranscribeButton } from "./TranscribeButton";
 import { IssueBlockedNotice } from "./IssueBlockedNotice";
 import { IssueAssignedBacklogNotice } from "./IssueAssignedBacklogNotice";
 import {
@@ -5544,6 +5545,15 @@ const IssueChatComposer = forwardRef<
               </Button>
             </>
           ) : null}
+          <TranscribeButton
+            disabled={!!uncertainSubmission}
+            onTranscript={(text) => {
+              const transcript = text.trim();
+              if (!transcript) return;
+              const prefix = bodyRef.current.trim().length > 0 ? " " : "";
+              editorRef.current?.insertMarkdown(`${prefix}${transcript}`);
+            }}
+          />
           {canToggleWorkMode ? (
             <Popover open={workModeMenuOpen} onOpenChange={setWorkModeMenuOpen}>
               <PopoverTrigger asChild>
