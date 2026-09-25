@@ -74,6 +74,7 @@ import type { ActionCommandOption } from "@/context/EditorAutocompleteContext";
 import { TaskChatComposerTakeoverActionsContext } from "./TaskChatComposerTakeoverContext";
 
 import { TaskChatPausedTakeover, type TaskComposerPause } from "./TaskChatPausedTakeover";
+import { TranscribeButton } from "../TranscribeButton";
 
 /** Structurally identical to IssueChatThread's module-private CommentReassignment. */
 export interface CommentReassignment {
@@ -1561,6 +1562,16 @@ export function TaskChatComposer({
                 Cancel
               </button>
             ) : null}
+
+            <TranscribeButton
+              disabled={disabled || submitting || !!uncertainSubmission}
+              onTranscript={(text) => {
+                const transcript = text.trim();
+                if (!transcript) return;
+                const prefix = bodyRef.current.trim().length > 0 ? " " : "";
+                editorRef.current?.insertMarkdown(`${prefix}${transcript}`);
+              }}
+            />
 
             <button
               type="button"

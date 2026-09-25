@@ -11,6 +11,7 @@ import {
 } from "react";
 import { AlertTriangle, Check, Loader2, Paperclip, Send } from "lucide-react";
 import { cn } from "../lib/utils";
+import { TranscribeButton } from "./TranscribeButton";
 
 /**
  * Shared chat composer (PAP-95a / PAP-96).
@@ -354,6 +355,17 @@ export const ChatComposer = forwardRef<ChatComposerHandle, ChatComposerProps>(fu
         {leadingTools}
 
         <span className="flex-1" />
+
+        <TranscribeButton
+          disabled={disabled || submitting}
+          className="h-7 w-7"
+          onTranscript={(text) => {
+            const cleaned = (singleLine ? text.replace(/\s+/g, " ") : text).trim();
+            if (!cleaned) return;
+            const base = value.replace(/\s+$/, "");
+            onChange(base ? `${base} ${cleaned}` : cleaned);
+          }}
+        />
 
         {trailingTools}
 

@@ -5,6 +5,20 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatComposer, type ChatComposerProps } from "./ChatComposer";
 
+const postForm = vi.hoisted(() => vi.fn());
+
+vi.mock("@/api/client", () => ({
+  api: { postForm },
+  ApiError: class ApiError extends Error {
+    status = 0;
+    body = null;
+  },
+}));
+
+vi.mock("@/context/CompanyContext", () => ({
+  useOptionalCompany: () => ({ selectedCompanyId: "company-1" }),
+}));
+
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 /** Stateful harness so the controlled textarea reflects typed input. */
@@ -63,8 +77,9 @@ describe("ChatComposer", () => {
     expect(input()).toBeTruthy();
     expect(input().placeholder).toBe("Ask anything…");
     expect(attachButton()).toBeNull();
-    // No formatting toolbar — there is exactly one button (send) when bare.
-    expect(container.querySelectorAll("button").length).toBe(1);
+    // No formatting toolbar — bare mode is the transcribe button plus send.
+    expect(container.querySelector('[data-testid="transcribe-button"]')).toBeTruthy();
+    expect(container.querySelectorAll("button").length).toBe(2);
     act(() => root.unmount());
   });
 
@@ -232,6 +247,47 @@ describe("ChatComposer", () => {
     expect(box.className).toContain("rounded-xl");
     expect(box.className).toContain("focus-within:border-muted-foreground/40");
     act(() => root.unmount());
+  });
+
+  it("inserts a transcript into the draft and does not send it", async () => {
+    class FakeRecorder {
+      state: "inactive" | "recording" = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["audio"], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+    }
+    vi.stubGlobal("MediaRecorder", Object.assign(FakeRecorder, {
+      isTypeSupported: () => true,
+    }));
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) },
+    });
+    postForm.mockResolvedValue({ text: "from the microphone" });
+    const onSubmit = vi.fn();
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<Harness onSubmit={onSubmit} initial="Hello" />);
+    });
+    const transcribe = container.querySelector<HTMLButtonElement>('[data-testid="transcribe-button"]')!;
+    await act(async () => {
+      transcribe.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      transcribe.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(input().value).toBe("Hello from the microphone");
+    expect(onSubmit).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+    await act(async () => root.unmount());
   });
 
   it("translucent surface keeps the drag-over attach layering", () => {
